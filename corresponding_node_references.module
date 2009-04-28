@@ -19,7 +19,7 @@ function corresponding_node_references_menu() {
  * Implementation hook_perm()
  */ 
 function corresponding_node_references_perm() {
-  return array('administercorresponding node references settings');
+  return array('administer corresponding node references settings');
 }
 
 /**
