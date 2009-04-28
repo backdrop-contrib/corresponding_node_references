@@ -1,0 +1,224 @@
+<?php
+/**
+ *  Implementation hook_menu()
+ */ 
+function corresponding_node_references_menu() {
+  $items = array();
+  $items['admin/settings/corresponding_node_references'] = array(
+    'title' => t('Corresponding node references'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('corresponding_node_references_settings_form'),
+    'access arguments' => array('administer corresponding node references settings'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation hook_perm()
+ */ 
+function corresponding_node_references_perm() {
+  return array('administercorresponding node references settings');
+}
+
+/**
+ * The settings form
+ */
+function corresponding_node_references_settings_form() {  
+  $form['intro'] = array('#value' => t('Check which node references should listen to each other. 
+  When checking a check box a reference on node type A to node B will automatically update the node reference field on node B 
+  adding an entrie which points to node A. So double editing nodes who refere to each other is no longer needed. 
+  (only node reference instances which are multiple and have only one node type to refer to are shown)'));
+  
+  //only node reference instances which are multiple
+  $result = db_query("SELECT cnf.field_name, cnf.global_settings FROM {content_node_field} cnf WHERE cnf.type = '%s' AND cnf.multiple = 1", 'nodereference');
+  while ($row = db_fetch_object($result)) {
+    $data = unserialize($row->global_settings);
+    $count = 0;
+    foreach ($data['referenceable_types'] as $reference) {
+      if ($reference != '0') {
+        //this module works with nodereference instances who refer only to one node type
+        $references[$row->field_name][] = $reference;
+        if ($count != 0) {
+          unset($references[$row->field_name]);
+        }
+        $count++;
+      }
+    }
+  }
+
+  $result = db_query("SELECT cnfi.field_name, cnfi.type_name FROM {content_node_field_instance} cnfi INNER JOIN {content_node_field} cnf ON cnf.field_name = cnfi.field_name WHERE cnf.type = '%s' AND cnf.multiple = 1", 'nodereference');
+  while ($row = db_fetch_object($result)) {
+    foreach ($references[$row->field_name] as $reference) {
+      $fields_to_compare[] = array('field_type' => $row->field_name, 'node_type' => $row->type_name, 'reference' => $reference);
+    }
+  }
+  if (!empty($fields_to_compare)) {
+    $corr_noderefs = array(); 
+    foreach ($fields_to_compare as $field) {
+      foreach ($fields_to_compare as $second_field) {     
+        if ($field['node_type'] == $second_field['reference'] && $second_field['node_type'] == $field['reference']) {
+          if (!array_key_exists($field['node_type'] . ' ' . $field['field_type'] . ' ' . $second_field['node_type'] . ' ' . $second_field['field_type'], $corr_noderefs) && !array_key_exists($second_field['node_type'] . ' ' . $second_field['field_type'] . ' ' . $field['node_type'] . ' ' . $field['field_type'], $corr_noderefs)) {
+            $corr_noderefs[$field['node_type'] . ' ' . $field['field_type'] . ' ' . $second_field['node_type'] . ' ' . $second_field['field_type']] = array('node_type_1' => $field['node_type'], 'field_1' => $field['field_type'], 'node_type_2' => $second_field['node_type'], 'field_2' => $second_field['field_type']);
+          }
+        }
+      }
+    }
+    
+    if (!empty($corr_noderefs)) {
+      foreach($corr_noderefs as $key => $corr_noderef) {
+        $formated_label = corresponding_node_references_format_label($key);
+        $formated_key = str_replace(' ', '*', $key);
+    
+        $form['values']['save ' . $formated_key] = array(
+          '#type' => 'checkbox', 
+          '#default_value' => db_result(db_query("SELECT enabled FROM {corresponding_node_references} WHERE node_types_content_fields = '%s'", $formated_key)),
+          '#title' => $formated_label,
+        );
+      }
+      $form['submit'] = array('#type' => 'submit', '#value' => t('Save'));
+    }
+    else {
+      $form['text'] = array('#value' => '<div>'.t('There are no node types which have a corresponding node references').'</div>'); 
+    }    
+  }
+  
+  return $form; 
+}
+
+/**
+ * Submit function for settings form
+ */ 
+function corresponding_node_references_settings_form_submit($form, $form_values) {
+  db_query("UPDATE {corresponding_node_references} SET enabled = %d", 0);
+  foreach ($form_values['clicked_button']['#post'] as $key => $value) {
+    $keys = explode('_', $key);  
+    if ($keys[0] == 'save') {
+      array_shift($keys);  
+      $key = implode('_', $keys);
+      $result = db_result(db_query("SELECT node_types_content_fields FROM {corresponding_node_references} WHERE node_types_content_fields = '%s'", $key));
+      if ($result) {
+        db_query("UPDATE {corresponding_node_references} SET enabled = %d WHERE node_types_content_fields = '%s'", $value['#value'], $key);
+      }
+      else {
+        db_query("INSERT INTO {corresponding_node_references} (node_types_content_fields, enabled) VALUES ('%s', %d)", $key, $value['#value']);
+      }
+    }
+  }
+}
+
+/**
+ * Formats a label
+ */ 
+function corresponding_node_references_format_label($key) {
+  $key = explode(' ', $key);
+  return t('!type1 with field !field1 <==> !type2 with field : !field2', array('!type1' => $key[0], '!field1' => $key[1], '!type2' => $key[2], '!field2' => $key[3]));
+}
+
+/**
+ * Implementation of hook_nodeapi()
+ */
+function corresponding_node_references_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  $result = db_query("SELECT node_types_content_fields FROM {corresponding_node_references} WHERE enabled = %d", 1);
+  switch ($op) {
+    case delete:
+      while ($row = db_fetch_object($result)) {
+        switch ($node->type) {
+          case $key[0]:
+            corresponding_node_references_remove_node_refs($node->nid, 'content_'.$key[3], $key[3].'_nid');
+            break;
+          case $key[2]:
+            corresponding_node_references_remove_node_refs($node->nid, 'content_'.$key[1], $key[1].'_nid');      
+            break;
+        }
+      }
+      break;
+    case update:
+    case insert:      
+      while ($row = db_fetch_object($result)) {
+        $key = explode('*', $row->node_types_content_fields);
+        switch ($node->type) {
+          case $key[0]:
+            $home_node = $node;
+            $home_field = $key[1];
+            $away_node_type = $key[2];
+            $away_field = $key[3];
+            corresponding_node_references_set_reverse_reference($home_node, $home_field, $away_node_type, $away_field);
+            break;
+          case $key[2]:
+            $home_node = $node;
+            $home_field = $key[3];
+            $away_node_type = $key[0];
+            $away_field = $key[1];
+            corresponding_node_references_set_reverse_reference($home_node, $home_field, $away_node_type, $away_field);           
+            break;
+        }
+      }
+      break;
+  }
+}
+/** 
+ * Executes functions excuting queries to set the node reference on the away node to the home node
+ * 
+ * @param $home_node the node object catched in the node api on this node a reference is made to the away node
+ * @param $home_field the field on the home node used to make the reference
+ * @param $away_node_type the type of the away node
+ * @param $away_field the name of the field on the away node referencing to the home node
+ *  
+ */
+function corresponding_node_references_set_reverse_reference($home_node, $home_field, $away_node_type, $away_field) {
+  $home_table = 'content_'.$home_field;
+  $away_table = 'content_'.$away_field;
+    
+  $referenced_nids = db_query("SELECT n.nid, n.vid FROM {$away_table} cfs INNER JOIN {node} n ON n.nid = cfs.nid WHERE n.type = '".$away_node_type."' AND cfs.".$away_field."_nid = %d AND n.vid = cfs.vid", $home_node->nid);
+  while ($row = db_fetch_object($referenced_nids)) {
+    $collect_referenced_nodes[] = $row;
+  }
+  
+  if (is_array($collect_referenced_nodes)) {
+    foreach ($collect_referenced_nodes as $collect_referenced_node) {
+      corresponding_node_references_remove_node_refs($home_node->nid, $away_field.'_nid', $away_table, $collect_referenced_node->nid);
+      corresponding_node_references_clear_cache($collect_referenced_node);
+    }
+  }
+  
+  if (count($home_node->{$home_field}) > 0) {
+    foreach ($home_node->{$home_field} as $key => $ref_nid) {
+      $referenced_node = node_load($ref_nid['nid']); 
+      if ($referenced_node->nid) {
+        $delta = corresponding_node_references_get_delta($away_table , $referenced_node->vid, $referenced_node->nid);           
+        corresponding_node_references_add_node_ref($away_table, $referenced_node->vid, $referenced_node->nid, $delta + 1, $home_node->nid, $away_field.'_nid');
+        corresponding_node_references_clear_cache($referenced_node);
+      }
+    }
+  }
+}
+
+/**
+ * Removes old node refs
+ */ 
+function corresponding_node_references_remove_node_refs($ref_nid, $field, $table, $nid) {
+  db_query("DELETE FROM {$table} WHERE $field = %d AND nid = %d", $ref_nid, $nid);
+}
+
+/**
+ * Adds a node ref
+ */ 
+function corresponding_node_references_add_node_ref($table, $vid, $nid, $delta, $ref_nid, $field) {
+  db_query("INSERT INTO {$table} (vid, nid, delta, $field) VALUES (%d, %d, %d, %d)", $vid, $nid, $delta, $ref_nid);
+}
+
+/**
+ * Gets the delta for the new node ref
+ */ 
+function corresponding_node_references_get_delta($table, $vid) {
+  return db_result(db_query("SELECT delta FROM $table WHERE vid = %d ORDER by delta DESC LIMIT 1", $vid));
+}
+
+/**
+ * Clears cache for a specific node
+ */ 
+function corresponding_node_references_clear_cache($node) {
+  db_query("DELETE FROM cache_content WHERE cid = '%s'", 'content:'.$node->nid.':'.$node->vid);
+}
