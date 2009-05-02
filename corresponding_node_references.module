@@ -213,12 +213,12 @@ function corresponding_node_references_add_node_ref($table, $vid, $nid, $delta, 
  * Gets the delta for the new node ref
  */ 
 function corresponding_node_references_get_delta($table, $vid) {
-  return db_result(db_query("SELECT delta FROM $table WHERE vid = %d ORDER by delta DESC LIMIT 1", $vid));
+  return db_result(db_query("SELECT delta FROM {$table} WHERE vid = %d ORDER by delta DESC LIMIT 1", $vid));
 }
 
 /**
  * Clears cache for a specific node
  */ 
 function corresponding_node_references_clear_cache($node) {
-  db_query("DELETE FROM cache_content WHERE cid = '%s'", 'content:'.$node->nid.':'.$node->vid);
+  db_query("DELETE FROM {cache_content} WHERE cid = '%s'", 'content:'.$node->nid.':'.$node->vid);
 }
