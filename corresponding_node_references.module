@@ -171,7 +171,7 @@ function corresponding_node_references_set_reverse_reference($home_node, $home_f
   $home_table = 'content_'.$home_field;
   $away_table = 'content_'.$away_field;
     
-  $referenced_nids = db_query("SELECT n.nid, n.vid FROM {$away_table} cfs INNER JOIN {node} n ON n.nid = cfs.nid WHERE n.type = '".$away_node_type."' AND cfs.".$away_field."_nid = %d AND n.vid = cfs.vid", $home_node->nid);
+  $referenced_nids = db_query("SELECT n.nid, n.vid FROM {".$away_table."} cfs INNER JOIN {node} n ON n.nid = cfs.nid WHERE n.type = '".$away_node_type."' AND cfs.".$away_field."_nid = %d AND n.vid = cfs.vid", $home_node->nid);
   while ($row = db_fetch_object($referenced_nids)) {
     $collect_referenced_nodes[] = $row;
   }
@@ -199,21 +199,21 @@ function corresponding_node_references_set_reverse_reference($home_node, $home_f
  * Removes old node refs
  */ 
 function corresponding_node_references_remove_node_refs($ref_nid, $field, $table, $nid) {
-  db_query("DELETE FROM {$table} WHERE $field = %d AND nid = %d", $ref_nid, $nid);
+  db_query("DELETE FROM {".$table."} WHERE $field = %d AND nid = %d", $ref_nid, $nid);
 }
 
 /**
  * Adds a node ref
  */ 
 function corresponding_node_references_add_node_ref($table, $vid, $nid, $delta, $ref_nid, $field) {
-  db_query("INSERT INTO {$table} (vid, nid, delta, $field) VALUES (%d, %d, %d, %d)", $vid, $nid, $delta, $ref_nid);
+  db_query("INSERT INTO {".$table."} (vid, nid, delta, $field) VALUES (%d, %d, %d, %d)", $vid, $nid, $delta, $ref_nid);
 }
 
 /**
  * Gets the delta for the new node ref
  */ 
 function corresponding_node_references_get_delta($table, $vid) {
-  return db_result(db_query("SELECT delta FROM {$table} WHERE vid = %d ORDER by delta DESC LIMIT 1", $vid));
+  return db_result(db_query("SELECT delta FROM {".$table."} WHERE vid = %d ORDER by delta DESC LIMIT 1", $vid));
 }
 
 /**
