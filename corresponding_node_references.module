@@ -50,8 +50,10 @@ function corresponding_node_references_settings_form() {
 
   $result = db_query("SELECT cnfi.field_name, cnfi.type_name FROM {content_node_field_instance} cnfi INNER JOIN {content_node_field} cnf ON cnf.field_name = cnfi.field_name WHERE cnf.type = '%s' AND cnf.multiple = 1", 'nodereference');
   while ($row = db_fetch_object($result)) {
-    foreach ($references[$row->field_name] as $reference) {
-      $fields_to_compare[] = array('field_type' => $row->field_name, 'node_type' => $row->type_name, 'reference' => $reference);
+    if (!empty($references[$row->field_name])) {
+      foreach ($references[$row->field_name] as $reference) {
+        $fields_to_compare[] = array('field_type' => $row->field_name, 'node_type' => $row->type_name, 'reference' => $reference);
+      }
     }
   }
   if (!empty($fields_to_compare)) {
@@ -206,6 +208,7 @@ function corresponding_node_references_remove_node_refs($ref_nid, $field, $table
  * Adds a node ref
  */ 
 function corresponding_node_references_add_node_ref($table, $vid, $nid, $delta, $ref_nid, $field) {
+  db_query("DELETE FROM {".$table."} WHERE $field IS NULL AND nid = %d AND vid = %d LIMIT 1", $nid, $vid);
   db_query("INSERT INTO {".$table."} (vid, nid, delta, $field) VALUES (%d, %d, %d, %d)", $vid, $nid, $delta, $ref_nid);
 }
 
