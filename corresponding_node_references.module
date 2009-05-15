@@ -126,12 +126,13 @@ function corresponding_node_references_nodeapi(&$node, $op, $a3 = NULL, $a4 = NU
   switch ($op) {
     case delete:
       while ($row = db_fetch_object($result)) {
+        $key = explode('*', $row->node_types_content_fields);
         switch ($node->type) {
           case $key[0]:
-            corresponding_node_references_remove_node_refs($node->nid, 'content_'.$key[3], $key[3].'_nid');
+            corresponding_node_references_remove_node_refs_after_delete($node->nid, $key[3].'_nid', 'content_'.$key[3]);
             break;
           case $key[2]:
-            corresponding_node_references_remove_node_refs($node->nid, 'content_'.$key[1], $key[1].'_nid');      
+            corresponding_node_references_remove_node_refs_after_delete($node->nid, $key[1].'_nid', 'content_'.$key[1]);      
             break;
         }
       }
@@ -202,6 +203,13 @@ function corresponding_node_references_set_reverse_reference($home_node, $home_f
  */ 
 function corresponding_node_references_remove_node_refs($ref_nid, $field, $table, $nid) {
   db_query("DELETE FROM {".$table."} WHERE $field = %d AND nid = %d", $ref_nid, $nid);
+}
+
+/**
+ * Removes old node refs after node deletion
+ */ 
+function corresponding_node_references_remove_node_refs_after_delete($nid, $field, $table) {
+  db_query("DELETE FROM {".$table."} WHERE $field = %d", $nid);
 }
 
 /**
