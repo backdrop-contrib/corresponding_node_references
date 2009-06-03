@@ -9,7 +9,7 @@ function corresponding_node_references_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('corresponding_node_references_settings_form'),
     'access arguments' => array('administer corresponding node references settings'),
-    'type' => MENU_SUGGESTED_ITEM,
+    'type' => MENU_NORMAL_ITEM,
   );
 
   return $items;
