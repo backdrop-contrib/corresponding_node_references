@@ -15,6 +15,7 @@ function corresponding_node_references_schema() {
     'fields' => array (
       'node_types_content_fields' => array('type' => 'varchar','length' => 200,'not null' => TRUE,'default' => ''),
       'enabled' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+      'single' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
     ),
     'primary key' => array('node_types_content_fields'),
   );
