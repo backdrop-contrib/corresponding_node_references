@@ -28,17 +28,19 @@ function corresponding_node_references_perm() {
 function corresponding_node_references_settings_form() {  
   $form['intro'] = array('#value' => t('Check which node references should listen to each other. 
   When checking a check box a reference on node type A to node B will automatically update the node reference field on node B 
-  adding an entrie which points to node A. So double editing nodes who refere to each other is no longer needed. 
-  (only node reference instances which are multiple and have only one node type to refer to are shown)'));
+  adding an entrie which points to node A. To set
+  the node reference to single enable "Set to single". 
+  <b>Make sure</b> that on your node reference instance settings the "number of values property" 
+  is still set to unlimited.'));
   
-  //only node reference instances which are multiple
+  //only node reference instances which are multiple, sinlge mode is posible see corresponding_nodereferences_form_alter() 
   $result = db_query("SELECT cnf.field_name, cnf.global_settings FROM {content_node_field} cnf WHERE cnf.type = '%s' AND cnf.multiple = 1", 'nodereference');
   while ($row = db_fetch_object($result)) {
     $data = unserialize($row->global_settings);
     $count = 0;
     foreach ($data['referenceable_types'] as $reference) {
       if ($reference != '0') {
-        //this module works with nodereference instances who refer only to one node type
+        //this module works with nodereference instances who refer only to one node type (one on one relations)
         $references[$row->field_name][] = $reference;
         if ($count != 0) {
           unset($references[$row->field_name]);
@@ -73,11 +75,20 @@ function corresponding_node_references_settings_form() {
         $formated_label = corresponding_node_references_format_label($key);
         $formated_key = str_replace(' ', '*', $key);
     
-        $form['values']['save ' . $formated_key] = array(
+        $form['values'][$formated_key] = array(
+          '#type' => 'fieldset',
+        );
+        $form['values'][$formated_key]['enabled ' . $formated_key] = array(
           '#type' => 'checkbox', 
           '#default_value' => db_result(db_query("SELECT enabled FROM {corresponding_node_references} WHERE node_types_content_fields = '%s'", $formated_key)),
           '#title' => $formated_label,
         );
+        $form['values'][$formated_key]['single ' . $formated_key] = array(
+          '#type' => 'checkbox',
+          '#default_value' => db_result(db_query("SELECT single FROM {corresponding_node_references} WHERE node_types_content_fields = '%s'", $formated_key)),
+          '#title' => t('Set to single'),
+        );
+        
       }
       $form['submit'] = array('#type' => 'submit', '#value' => t('Save'));
     }
@@ -94,19 +105,26 @@ function corresponding_node_references_settings_form() {
  */ 
 function corresponding_node_references_settings_form_submit($form, $form_values) {
   db_query("UPDATE {corresponding_node_references} SET enabled = %d", 0);
+  db_query("UPDATE {corresponding_node_references} SET single = %d", 0);
+  
+  $query_values = array();
   foreach ($form_values['clicked_button']['#post'] as $key => $value) {
-    $keys = explode('_', $key);  
-    if ($keys[0] == 'save') {
-      array_shift($keys);  
-      $key = implode('_', $keys);
-      $result = db_result(db_query("SELECT node_types_content_fields FROM {corresponding_node_references} WHERE node_types_content_fields = '%s'", $key));
-      if ($result) {
-        db_query("UPDATE {corresponding_node_references} SET enabled = %d WHERE node_types_content_fields = '%s'", $value['#value'], $key);
-      }
-      else {
-        db_query("INSERT INTO {corresponding_node_references} (node_types_content_fields, enabled) VALUES ('%s', %d)", $key, $value['#value']);
-      }
+    $keys = explode('_', $key);
+    
+    if ($keys[0] == 'enabled') {
+      $key = implode('_', $keys); 
+      $key = str_replace('enabled_', '', $key);  
+      $query_values[$key]['enabled'] = $value['#value']; 
     }
+    if ($keys[0] == 'single') {
+      $key = implode('_', $keys); 
+      $key = str_replace('single_', '', $key);  
+      $query_values[$key]['single'] = $value['#value'];
+    }
+  }  
+  
+  foreach($query_values as $key => $values) {
+    db_query("REPLACE INTO {corresponding_node_references} (node_types_content_fields, single, enabled) VALUES ('%s', %d, %d)", $key, $values['single'], $values['enabled']);  
   }
 }
 
@@ -122,6 +140,10 @@ function corresponding_node_references_format_label($key) {
  * Implementation of hook_nodeapi()
  */
 function corresponding_node_references_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  //the hook wont be executed when not updating, deleting or inserting
+  if (!($op == 'delete' || $op == 'update' || $op == 'insert' )) { 
+    return; 
+  }
   $result = db_query("SELECT node_types_content_fields FROM {corresponding_node_references} WHERE enabled = %d", 1);
   switch ($op) {
     case delete:
@@ -141,6 +163,7 @@ function corresponding_node_references_nodeapi(&$node, $op, $a3 = NULL, $a4 = NU
     case insert:      
       while ($row = db_fetch_object($result)) {
         $key = explode('*', $row->node_types_content_fields);
+        
         switch ($node->type) {
           case $key[0]:
             $home_node = $node;
@@ -148,7 +171,9 @@ function corresponding_node_references_nodeapi(&$node, $op, $a3 = NULL, $a4 = NU
             $away_node_type = $key[2];
             $away_field = $key[3];
             corresponding_node_references_set_reverse_reference($home_node, $home_field, $away_node_type, $away_field);
-            break;
+            if ($key[0] != $key[2]) { 
+              break;
+            }
           case $key[2]:
             $home_node = $node;
             $home_field = $key[3];
@@ -173,7 +198,7 @@ function corresponding_node_references_nodeapi(&$node, $op, $a3 = NULL, $a4 = NU
 function corresponding_node_references_set_reverse_reference($home_node, $home_field, $away_node_type, $away_field) {
   $home_table = 'content_'.$home_field;
   $away_table = 'content_'.$away_field;
-    
+ 
   $referenced_nids = db_query("SELECT n.nid, n.vid FROM {".$away_table."} cfs INNER JOIN {node} n ON n.nid = cfs.nid WHERE n.type = '".$away_node_type."' AND cfs.".$away_field."_nid = %d AND n.vid = cfs.vid", $home_node->nid);
   while ($row = db_fetch_object($referenced_nids)) {
     $collect_referenced_nodes[] = $row;
@@ -233,3 +258,22 @@ function corresponding_node_references_get_delta($table, $vid) {
 function corresponding_node_references_clear_cache($node) {
   db_query("DELETE FROM {cache_content} WHERE cid = '%s'", 'content:'.$node->nid.':'.$node->vid);
 }
+
+/**
+* Implementation of hook_form_alter()
+* This allows single noderefences to be used for a relationship if the single mode is enabled
+*/
+function corresponding_node_references_form_alter(&$form, $form_state) {
+  if ($form['#id'] == 'node-form') {
+    $result = db_query("SELECT node_types_content_fields FROM {corresponding_node_references} WHERE single = 1 AND enabled = 1");
+    $type = $form['type']['#value'];
+    
+    while ($row = db_fetch_object($result)) {
+      $key = explode('*', $row->node_types_content_fields);
+      if ($key[0] == $type || $key[2] == $type) {
+        $form['#field_info'][$key[1]]['multiple'] = 0;
+        $form['#field_info'][$key[3]]['multiple'] = 0;
+      }
+    }
+  }
+} 

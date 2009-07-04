@@ -28,3 +28,16 @@ function corresponding_node_references_schema() {
 function corresponding_node_references_uninstall() {
   drupal_uninstall_schema('corresponding_node_references');
 }
+
+/**
+ * Add a new field to the database table allows single nodereferences
+ */
+function corresponding_node_references_update_6900() {
+  $ret = array();
+  if (db_table_exists('corresponding_node_references')) {
+    $spec = array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0);
+    db_add_field(&$ret, 'corresponding_node_references', 'single', $spec); 
+  }
+  
+  return $ret;
+}
