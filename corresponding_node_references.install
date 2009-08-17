@@ -16,6 +16,7 @@ function corresponding_node_references_schema() {
       'node_types_content_fields' => array('type' => 'varchar','length' => 200,'not null' => TRUE,'default' => ''),
       'enabled' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
       'single' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+      'single2' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
     ),
     'primary key' => array('node_types_content_fields'),
   );
@@ -33,11 +34,25 @@ function corresponding_node_references_uninstall() {
 /**
  * Add a new field to the database table allows single nodereferences
  */
-function corresponding_node_references_update_6900() {
+function corresponding_node_references_update_6200() {
   $ret = array();
   if (db_table_exists('corresponding_node_references')) {
     $spec = array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0);
-    db_add_field($ret, 'corresponding_node_references', 'single', $spec); 
+    db_add_field(&$ret, 'corresponding_node_references', 'single', $spec); 
+  }
+  
+  return $ret;
+}
+
+/**
+ * Add a new field to the database table allows single nodereferences
+ */
+function corresponding_node_references_update_6300() {
+  $ret = array();
+  if (db_table_exists('corresponding_node_references')) {
+    $spec = array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0);
+    db_add_field(&$ret, 'corresponding_node_references', 'single2', $spec); 
+    db_query("UPDATE {corresponding_node_references} SET single2 = 1 WHERE single = 1");
   }
   
   return $ret;

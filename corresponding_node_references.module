@@ -82,14 +82,18 @@ function corresponding_node_references_settings_form() {
         $form['values'][$formated_key]['single ' . $formated_key] = array(
           '#type' => 'checkbox',
           '#default_value' => db_result(db_query("SELECT single FROM {corresponding_node_references} WHERE node_types_content_fields = '%s'", $formated_key)),
-          '#title' => t('Set to single'),
+          '#title' => t('Set first reference instance to single'),
         );
-        
+        $form['values'][$formated_key]['single2 ' . $formated_key] = array(
+          '#type' => 'checkbox',
+          '#default_value' => db_result(db_query("SELECT single2 FROM {corresponding_node_references} WHERE node_types_content_fields = '%s'", $formated_key)),
+          '#title' => t('Set second reference instance  to single'),
+        );        
       }
       $form['submit'] = array('#type' => 'submit', '#value' => t('Save'));
     }
     else {
-      $form['text'] = array('#value' => '<div>'.t('There are no node types which have a corresponding node references').'</div>'); 
+      $form['text'] = array('#value' => '<div>'.t('There are no node types which have a corresponding node reference').'</div>'); 
     }    
   }
   
@@ -117,10 +121,16 @@ function corresponding_node_references_settings_form_submit($form, $form_values)
       $key = str_replace('single_', '', $key);  
       $query_values[$key]['single'] = $value['#value'];
     }
+    if ($keys[0] == 'single2') {
+      $key = implode('_', $keys); 
+      $key = str_replace('single2_', '', $key);  
+      $query_values[$key]['single2'] = $value['#value'];
+    }
   }  
   
   foreach($query_values as $key => $values) {
-    db_query("REPLACE INTO {corresponding_node_references} (node_types_content_fields, single, enabled) VALUES ('%s', %d, %d)", $key, $values['single'], $values['enabled']);  
+    db_query("DELETE FROM {corresponding_node_references} WHERE node_types_content_fields='%s'", $key);  
+	db_query("INSERT INTO {corresponding_node_references} (node_types_content_fields, single, single2, enabled) VALUES ('%s', %d, %d, %d)", $key, $values['single'], $values['single2'],$values['enabled']);   
   }
 }
 
@@ -237,7 +247,7 @@ function corresponding_node_references_remove_node_refs_after_delete($nid, $fiel
  * Adds a node ref
  */ 
 function corresponding_node_references_add_node_ref($table, $vid, $nid, $delta, $ref_nid, $field) {
-  db_query("DELETE FROM {".$table."} WHERE $field IS NULL AND nid = %d AND vid = %d LIMIT 1", $nid, $vid);
+  db_query("DELETE FROM {".$table."} WHERE $field IS NULL AND nid = %d AND vid = %d", $nid, $vid);
   db_query("INSERT INTO {".$table."} (vid, nid, delta, $field) VALUES (%d, %d, %d, %d)", $vid, $nid, $delta, $ref_nid);
 }
 
@@ -261,14 +271,17 @@ function corresponding_node_references_clear_cache($node) {
 */
 function corresponding_node_references_form_alter(&$form, $form_state) {
   if ($form['#id'] == 'node-form') {
-    $result = db_query("SELECT node_types_content_fields FROM {corresponding_node_references} WHERE single = 1 AND enabled = 1");
+    $result = db_query("SELECT node_types_content_fields, single, single2 FROM {corresponding_node_references} WHERE (single = 1 || single2 = 1) AND enabled = 1");
     $type = $form['type']['#value'];
     
     while ($row = db_fetch_object($result)) {
       $key = explode('*', $row->node_types_content_fields);
-      if ($key[0] == $type || $key[2] == $type) {
+
+      if ($key[0] == $type && $row->single == 1) {
         $form['#field_info'][$key[1]]['multiple'] = 0;
-        $form['#field_info'][$key[3]]['multiple'] = 0;
+      }
+      if ($key[2] == $type && $row->single2 == 1) {
+        $form['#field_info'][$key[3]]['multiple'] = 0; 
       }
     }
   }
