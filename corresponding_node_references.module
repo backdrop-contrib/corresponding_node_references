@@ -271,17 +271,34 @@ function corresponding_node_references_clear_cache($node) {
 */
 function corresponding_node_references_form_alter(&$form, $form_state) {
   if ($form['#id'] == 'node-form') {
-    $result = db_query("SELECT node_types_content_fields, single, single2 FROM {corresponding_node_references} WHERE (single = 1 || single2 = 1) AND enabled = 1");
+    $result = db_query("SELECT node_types_content_fields, single, single2 FROM {corresponding_node_references} WHERE (single = 1 OR single2 = 1) AND enabled = 1");
     $type = $form['type']['#value'];
-    
+   
     while ($row = db_fetch_object($result)) {
       $key = explode('*', $row->node_types_content_fields);
 
       if ($key[0] == $type && $row->single == 1) {
         $form['#field_info'][$key[1]]['multiple'] = 0;
+        // Also unset the form elements that would allow the user to add more
+        if (isset($form[$key[1]][1])) {
+          unset($form[$key[1]][1]);
+        }
+        $add_more = $key[1] . "_add_more";
+        if (isset($form[$key[1]][$add_more])) {
+          unset($form[$key[1]][$add_more]);
+        }
       }
       if ($key[2] == $type && $row->single2 == 1) {
-        $form['#field_info'][$key[3]]['multiple'] = 0; 
+        $form['#field_info'][$key[3]]['multiple'] = 0;
+
+        // Also unset the form elements that would allow the user to add more
+        if (isset($form[$key[3]][1])) {
+          unset($form[$key[3]][1]);
+        }
+        $add_more = $key[3] . "_add_more";
+        if (isset($form[$key[3]][$add_more])) {
+          unset($form[$key[3]][$add_more]);
+        }
       }
     }
   }
