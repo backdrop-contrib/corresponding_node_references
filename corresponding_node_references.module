@@ -106,6 +106,7 @@ function corresponding_node_references_settings_form() {
 function corresponding_node_references_settings_form_submit($form, $form_values) {
   db_query("UPDATE {corresponding_node_references} SET enabled = %d", 0);
   db_query("UPDATE {corresponding_node_references} SET single = %d", 0);
+  db_query("UPDATE {corresponding_node_references} SET single2 = %d", 0);
   
   $query_values = array();
   foreach ($form_values['clicked_button']['#post'] as $key => $value) {
@@ -130,7 +131,7 @@ function corresponding_node_references_settings_form_submit($form, $form_values)
   
   foreach($query_values as $key => $values) {
     db_query("DELETE FROM {corresponding_node_references} WHERE node_types_content_fields='%s'", $key);  
-	db_query("INSERT INTO {corresponding_node_references} (node_types_content_fields, single, single2, enabled) VALUES ('%s', %d, %d, %d)", $key, $values['single'], $values['single2'],$values['enabled']);   
+	  db_query("INSERT INTO {corresponding_node_references} (node_types_content_fields, single, single2, enabled) VALUES ('%s', %d, %d, %d)", $key, $values['single'], $values['single2'],$values['enabled']);   
   }
 }
 
@@ -222,11 +223,28 @@ function corresponding_node_references_set_reverse_reference($home_node, $home_f
       $referenced_node = node_load($ref_nid['nid']); 
       if ($referenced_node->nid) {
         $delta = corresponding_node_references_get_delta($away_table , $referenced_node->vid, $referenced_node->nid);           
-        corresponding_node_references_add_node_ref($away_table, $referenced_node->vid, $referenced_node->nid, $delta + 1, $home_node->nid, $away_field.'_nid');
+        //check if the ref doesnt allready exists
+        if (!corresponding_node_references_check_ref($away_table, $referenced_node->vid, $referenced_node->nid, $home_node->nid, $away_field.'_nid')) {
+          corresponding_node_references_add_node_ref($away_table, $referenced_node->vid, $referenced_node->nid, $delta + 1, $home_node->nid, $away_field.'_nid'); 
+        }
         corresponding_node_references_clear_cache($referenced_node);
       }
     }
   }
+}
+
+/**
+ * Checks if reference allready exists
+ *
+ * @param string $table
+ * @param int $vid
+ * @param int $nid
+ * @param int $ref_nid
+ * @param string $field
+ * @return bool 
+ */
+function corresponding_node_references_check_ref($table, $vid, $nid, $ref_nid, $field) {
+  return (db_result(db_query("SELECT nid FROM {".$table."} WHERE nid = %d AND vid = %d AND $field = %d", $nid, $vid, $ref_nid))) ? true : false;  
 }
 
 /**
