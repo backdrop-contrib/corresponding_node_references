@@ -147,140 +147,35 @@ function corresponding_node_references_format_label($key) {
  * Implementation of hook_nodeapi()
  */
 function corresponding_node_references_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
-  //the hook wont be executed when not updating, deleting or inserting
-  if (!($op == 'delete' || $op == 'update' || $op == 'insert' )) { 
-    return; 
-  }
-  $result = db_query("SELECT node_types_content_fields FROM {corresponding_node_references} WHERE enabled = %d", 1);
+
   switch ($op) {
-    case delete:
-      while ($row = db_fetch_object($result)) {
-        $key = explode('*', $row->node_types_content_fields);
-        switch ($node->type) {
-          case $key[0]:
-            corresponding_node_references_remove_node_refs_after_delete($node->nid, $key[3].'_nid', 'content_'.$key[3]);
-            break;
-          case $key[2]:
-            corresponding_node_references_remove_node_refs_after_delete($node->nid, $key[1].'_nid', 'content_'.$key[1]);      
-            break;
-        }
-      }
-      break;
+    case insert:
     case update:
-    case insert:      
+    case delete:
+      module_load_include('inc', 'corresponding_node_references', 'corresponding_node_references.crud');
+
+      $result = db_query("SELECT node_types_content_fields FROM {corresponding_node_references} WHERE enabled = %d", 1);
       while ($row = db_fetch_object($result)) {
         $key = explode('*', $row->node_types_content_fields);
         
         switch ($node->type) {
           case $key[0]:
-            $home_node = $node;
-            $home_field = $key[1];
-            $away_node_type = $key[2];
-            $away_field = $key[3];
-            corresponding_node_references_set_reverse_reference($home_node, $home_field, $away_node_type, $away_field);
+            $args = array($node, $key[1], $key[2], $key[3]);
+            $function = 'corresponding_node_references_' . $op;
+            call_user_func_array($function, $args);
             if ($key[0] != $key[2]) { 
               break;
             }
+            // Fall through.
           case $key[2]:
-            $home_node = $node;
-            $home_field = $key[3];
-            $away_node_type = $key[0];
-            $away_field = $key[1];
-            corresponding_node_references_set_reverse_reference($home_node, $home_field, $away_node_type, $away_field);           
+            $args = array($node, $key[3], $key[0], $key[1]);
+            $function = 'corresponding_node_references_' . $op;
+            call_user_func_array($function, $args);
             break;
         }
       }
       break;
   }
-}
-/** 
- * Executes functions excuting queries to set the node reference on the away node to the home node
- * 
- * @param $home_node the node object catched in the node api on this node a reference is made to the away node
- * @param $home_field the field on the home node used to make the reference
- * @param $away_node_type the type of the away node
- * @param $away_field the name of the field on the away node referencing to the home node
- *  
- */
-function corresponding_node_references_set_reverse_reference($home_node, $home_field, $away_node_type, $away_field) {
-  $home_table = 'content_'.$home_field;
-  $away_table = 'content_'.$away_field;
- 
-  $referenced_nids = db_query("SELECT n.nid, n.vid FROM {".$away_table."} cfs INNER JOIN {node} n ON n.nid = cfs.nid WHERE n.type = '".$away_node_type."' AND cfs.".$away_field."_nid = %d AND n.vid = cfs.vid", $home_node->nid);
-  while ($row = db_fetch_object($referenced_nids)) {
-    $collect_referenced_nodes[] = $row;
-  }
-  
-  if (is_array($collect_referenced_nodes)) {
-    foreach ($collect_referenced_nodes as $collect_referenced_node) {
-      corresponding_node_references_remove_node_refs($home_node->nid, $away_field.'_nid', $away_table, $collect_referenced_node->nid);
-      corresponding_node_references_clear_cache($collect_referenced_node);
-    }
-  }
-  
-  if (count($home_node->{$home_field}) > 0) {
-    foreach ($home_node->{$home_field} as $key => $ref_nid) {
-      $referenced_node = node_load($ref_nid['nid']); 
-      if ($referenced_node->nid) {
-        $delta = corresponding_node_references_get_delta($away_table , $referenced_node->vid, $referenced_node->nid);           
-        //check if the ref doesnt allready exists
-        if (!corresponding_node_references_check_ref($away_table, $referenced_node->vid, $referenced_node->nid, $home_node->nid, $away_field.'_nid')) {
-          corresponding_node_references_add_node_ref($away_table, $referenced_node->vid, $referenced_node->nid, $delta + 1, $home_node->nid, $away_field.'_nid'); 
-        }
-        corresponding_node_references_clear_cache($referenced_node);
-      }
-    }
-  }
-}
-
-/**
- * Checks if reference allready exists
- *
- * @param string $table
- * @param int $vid
- * @param int $nid
- * @param int $ref_nid
- * @param string $field
- * @return bool 
- */
-function corresponding_node_references_check_ref($table, $vid, $nid, $ref_nid, $field) {
-  return (db_result(db_query("SELECT nid FROM {".$table."} WHERE nid = %d AND vid = %d AND $field = %d", $nid, $vid, $ref_nid))) ? true : false;  
-}
-
-/**
- * Removes old node refs
- */ 
-function corresponding_node_references_remove_node_refs($ref_nid, $field, $table, $nid) {
-  db_query("DELETE FROM {".$table."} WHERE $field = %d AND nid = %d", $ref_nid, $nid);
-}
-
-/**
- * Removes old node refs after node deletion
- */ 
-function corresponding_node_references_remove_node_refs_after_delete($nid, $field, $table) {
-  db_query("DELETE FROM {".$table."} WHERE $field = %d", $nid);
-}
-
-/**
- * Adds a node ref
- */ 
-function corresponding_node_references_add_node_ref($table, $vid, $nid, $delta, $ref_nid, $field) {
-  db_query("DELETE FROM {".$table."} WHERE $field IS NULL AND nid = %d AND vid = %d", $nid, $vid);
-  db_query("INSERT INTO {".$table."} (vid, nid, delta, $field) VALUES (%d, %d, %d, %d)", $vid, $nid, $delta, $ref_nid);
-}
-
-/**
- * Gets the delta for the new node ref
- */ 
-function corresponding_node_references_get_delta($table, $vid) {
-  return db_result(db_query("SELECT delta FROM {".$table."} WHERE vid = %d ORDER by delta DESC LIMIT 1", $vid));
-}
-
-/**
- * Clears cache for a specific node
- */ 
-function corresponding_node_references_clear_cache($node) {
-  db_query("DELETE FROM {cache_content} WHERE cid = '%s'", 'content:'.$node->nid.':'.$node->vid);
 }
 
 /**
