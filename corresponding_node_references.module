@@ -34,19 +34,17 @@ function corresponding_node_references_settings_form() {
   is still set to unlimited.'));
   
   //only node reference instances which are multiple, sinlge mode is posible see corresponding_nodereferences_form_alter() 
-  $result = db_query("SELECT cnf.field_name, cnf.global_settings FROM {content_node_field} cnf WHERE cnf.type = '%s' AND cnf.multiple = 1", 'nodereference');
+  $result = db_query("SELECT cnf.field_name, cnf.global_settings FROM {content_node_field} cnf WHERE cnf.type = '%s'", 'nodereference');
   while ($row = db_fetch_object($result)) {
     $data = unserialize($row->global_settings);
-    $count = 0;
     foreach ($data['referenceable_types'] as $reference) {
       if ($reference != '0') {
         $references[$row->field_name][] = $reference;
-        $count++;
       }
     }
   }
 
-  $result = db_query("SELECT cnfi.field_name, cnfi.type_name FROM {content_node_field_instance} cnfi INNER JOIN {content_node_field} cnf ON cnf.field_name = cnfi.field_name WHERE cnf.type = '%s' AND cnf.multiple = 1", 'nodereference');
+  $result = db_query("SELECT cnfi.field_name, cnfi.type_name FROM {content_node_field_instance} cnfi INNER JOIN {content_node_field} cnf ON cnf.field_name = cnfi.field_name WHERE cnf.type = '%s'", 'nodereference');
   while ($row = db_fetch_object($result)) {
     if (!empty($references[$row->field_name])) {
       foreach ($references[$row->field_name] as $reference) {
@@ -79,16 +77,6 @@ function corresponding_node_references_settings_form() {
           '#default_value' => db_result(db_query("SELECT enabled FROM {corresponding_node_references} WHERE node_types_content_fields = '%s'", $formated_key)),
           '#title' => $formated_label,
         );
-        $form['values'][$formated_key]['single ' . $formated_key] = array(
-          '#type' => 'checkbox',
-          '#default_value' => db_result(db_query("SELECT single FROM {corresponding_node_references} WHERE node_types_content_fields = '%s'", $formated_key)),
-          '#title' => t('Set first reference instance to single'),
-        );
-        $form['values'][$formated_key]['single2 ' . $formated_key] = array(
-          '#type' => 'checkbox',
-          '#default_value' => db_result(db_query("SELECT single2 FROM {corresponding_node_references} WHERE node_types_content_fields = '%s'", $formated_key)),
-          '#title' => t('Set second reference instance  to single'),
-        );        
       }
       $form['submit'] = array('#type' => 'submit', '#value' => t('Save'));
     }
@@ -105,8 +93,6 @@ function corresponding_node_references_settings_form() {
  */ 
 function corresponding_node_references_settings_form_submit($form, $form_values) {
   db_query("UPDATE {corresponding_node_references} SET enabled = %d", 0);
-  db_query("UPDATE {corresponding_node_references} SET single = %d", 0);
-  db_query("UPDATE {corresponding_node_references} SET single2 = %d", 0);
   
   $query_values = array();
   foreach ($form_values['clicked_button']['#post'] as $key => $value) {
@@ -117,22 +103,14 @@ function corresponding_node_references_settings_form_submit($form, $form_values)
       $key = str_replace('enabled_', '', $key);  
       $query_values[$key]['enabled'] = $value['#value']; 
     }
-    if ($keys[0] == 'single') {
-      $key = implode('_', $keys); 
-      $key = str_replace('single_', '', $key);  
-      $query_values[$key]['single'] = $value['#value'];
-    }
-    if ($keys[0] == 'single2') {
-      $key = implode('_', $keys); 
-      $key = str_replace('single2_', '', $key);  
-      $query_values[$key]['single2'] = $value['#value'];
-    }
   }  
   
   foreach($query_values as $key => $values) {
     db_query("DELETE FROM {corresponding_node_references} WHERE node_types_content_fields='%s'", $key);  
-	  db_query("INSERT INTO {corresponding_node_references} (node_types_content_fields, single, single2, enabled) VALUES ('%s', %d, %d, %d)", $key, $values['single'], $values['single2'],$values['enabled']);   
+	  db_query("INSERT INTO {corresponding_node_references} (node_types_content_fields, enabled) VALUES ('%s', %d)", $key,$values['enabled']);   
   }
+  
+  drupal_set_message(t('The configuration has been saved'));
 }
 
 /**
@@ -157,7 +135,6 @@ function corresponding_node_references_nodeapi(&$node, $op, $a3 = NULL, $a4 = NU
       $result = db_query("SELECT node_types_content_fields FROM {corresponding_node_references} WHERE enabled = %d", 1);
       while ($row = db_fetch_object($result)) {
         $key = explode('*', $row->node_types_content_fields);
-        
         switch ($node->type) {
           case $key[0]:
             $args = array($node, $key[1], $key[2], $key[3]);
@@ -177,42 +154,3 @@ function corresponding_node_references_nodeapi(&$node, $op, $a3 = NULL, $a4 = NU
       break;
   }
 }
-
-/**
-* Implementation of hook_form_alter()
-* This allows single noderefences to be used for a relationship if the single mode is enabled
-*/
-function corresponding_node_references_form_alter(&$form, $form_state) {
-  if ($form['#id'] == 'node-form') {
-    $result = db_query("SELECT node_types_content_fields, single, single2 FROM {corresponding_node_references} WHERE (single = 1 OR single2 = 1) AND enabled = 1");
-    $type = $form['type']['#value'];
-   
-    while ($row = db_fetch_object($result)) {
-      $key = explode('*', $row->node_types_content_fields);
-
-      if ($key[0] == $type && $row->single == 1) {
-        $form['#field_info'][$key[1]]['multiple'] = 0;
-        // Also unset the form elements that would allow the user to add more
-        if (isset($form[$key[1]][1])) {
-          unset($form[$key[1]][1]);
-        }
-        $add_more = $key[1] . "_add_more";
-        if (isset($form[$key[1]][$add_more])) {
-          unset($form[$key[1]][$add_more]);
-        }
-      }
-      if ($key[2] == $type && $row->single2 == 1) {
-        $form['#field_info'][$key[3]]['multiple'] = 0;
-
-        // Also unset the form elements that would allow the user to add more
-        if (isset($form[$key[3]][1])) {
-          unset($form[$key[3]][1]);
-        }
-        $add_more = $key[3] . "_add_more";
-        if (isset($form[$key[3]][$add_more])) {
-          unset($form[$key[3]][$add_more]);
-        }
-      }
-    }
-  }
-} 
