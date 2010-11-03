@@ -25,7 +25,7 @@ function corresponding_node_references_insert($home_node, $home_field, $away_nod
         if ($referenced_node = node_load(array('nid' => $reference['nid'], 'type' => $away_node_type), NULL, true)) {
           // Add the new reference.
   
-        	$referenced_node->{$away_field}[] = array('nid' => $home_node->nid);
+          $referenced_node->{$away_field}[] = array('nid' => $home_node->nid);
           _corresponding_node_references_update($referenced_node);
         }
       }
@@ -90,7 +90,7 @@ function corresponding_node_references_update($home_node, $home_field, $away_nod
       foreach ($added as $nid) {
         // Load the referenced node if it is of the specified away type.
         if ($referenced_node = node_load(array('nid' => $nid, 'type' => $away_node_type), NULL, true)) {
-        	// Detect whether the reference already exists.
+          // Detect whether the reference already exists.
           $exists = FALSE;
           if ($referenced_node->$away_field && !empty($referenced_node->$away_field)) {
             foreach ($referenced_node->$away_field as $data) {
@@ -133,10 +133,10 @@ function corresponding_node_references_update($home_node, $home_field, $away_nod
               _corresponding_node_references_update($referenced_node);
             }
             else {
-            	$t_reference = format_plural($references, '1 reference', '@count references');
-            	$t_allowed = format_plural($allowed_references, '1 reference is', '@count references are');
-            	drupal_set_message(
-            	  t('Reference overloading: @title would of had @t_reference and only @t_allowed permitted. Before adding a reference, you would need to <a href="@url">edit</a> @title to remove an existing reference and resave this node to have make it correspond.', 
+              $t_reference = format_plural($references, '1 reference', '@count references');
+              $t_allowed = format_plural($allowed_references, '1 reference is', '@count references are');
+              drupal_set_message(
+                t('Reference overloading: @title would of had @t_reference and only @t_allowed permitted. Before adding a reference, you would need to <a href="@url">edit</a> @title to remove an existing reference and resave this node to have make it correspond.', 
                   array(
                     '@title' => $referenced_node->title, 
                     '@url' => url('node/'. $referenced_node->nid),
@@ -167,7 +167,7 @@ function corresponding_node_references_delete($home_node, $home_field, $away_nod
   foreach ($home_node->$home_field as $reference) {
     if (!empty($reference['nid'])) {
       // Load the referenced node if it is of the specified away type.
-      if ($referenced_node = node_load(array('nid' => $nid, 'type' => $away_node_type), NULL, true)) {
+      if ($referenced_node = node_load(array('nid' => $reference['nid'], 'type' => $away_node_type), NULL, true)) {
         // Iterate through the away node's references.
         foreach ($referenced_node->$away_field as $key => $value) {
           // Remove references to the deleted node.
