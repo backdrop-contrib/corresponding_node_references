@@ -25,7 +25,26 @@ function corresponding_node_references_insert($home_node, $home_field, $away_nod
         if ($referenced_node = node_load(array('nid' => $reference['nid'], 'type' => $away_node_type), NULL, true)) {
           // Add the new reference.
   
-          $referenced_node->{$away_field}[] = array('nid' => $home_node->nid);
+          // If there are no other references, we need to make sure this is delta 0
+          if ($referenced_node->{$away_field}[0]['nid'] == NULL) {
+            $referenced_node->{$away_field}[0]['nid'] = $home_node->nid;
+          }
+          else {
+            // Add the new reference.
+            //Check for doubles, could happen when nodes of same type are referenced
+            $exists = FALSE;
+          	foreach ($referenced_node->{$away_field} as $key => $value) {
+              if ($value['nid'] == $home_node->nid) {
+                $exists = TRUE;
+                break;
+              }
+            }
+            
+            if  (!$exists) {
+          	  $referenced_node->{$away_field}[] = array('nid' => $home_node->nid);
+            }
+          }
+        	        
           _corresponding_node_references_update($referenced_node);
         }
       }
@@ -42,8 +61,11 @@ function corresponding_node_references_insert($home_node, $home_field, $away_nod
  * @param $home_field the field on the home node used to make the reference
  * @param $away_node_type the type of the away node
  * @param $away_field the name of the field on the away node referencing to the home node
+ * @param $process_unchanged whether or not to process node reference fields whose values have not changed.
+ *   This is useful for nodes that existed before installing this module and have corresponding node
+ *   reference fields that don't match up.
  */
-function corresponding_node_references_update($home_node, $home_field, $away_node_type, $away_field) {
+function corresponding_node_references_update($home_node, $home_field, $away_node_type, $away_field, $process_unchanged = FALSE) {
   $old_node = node_load($home_node->nid, NULL, false);
   $old = $new = array();
     
@@ -56,6 +78,12 @@ function corresponding_node_references_update($home_node, $home_field, $away_nod
         }
       }
     }
+    
+    // If we are processing unchanged references, remove all new references from the old references.
+    if ($process_unchanged) {
+      $old = array_diff($old, $new);
+    }    
+    
     // Determine the nodereference values after the update.
     if (isset($home_node->$home_field) && is_array($home_node->$home_field)) {
       foreach ($home_node->$home_field as $reference) {
@@ -90,7 +118,7 @@ function corresponding_node_references_update($home_node, $home_field, $away_nod
       foreach ($added as $nid) {
         // Load the referenced node if it is of the specified away type.
         if ($referenced_node = node_load(array('nid' => $nid, 'type' => $away_node_type), NULL, true)) {
-          // Detect whether the reference already exists.
+        	// Detect whether the reference already exists.
           $exists = FALSE;
           if ($referenced_node->$away_field && !empty($referenced_node->$away_field)) {
             foreach ($referenced_node->$away_field as $data) {
@@ -104,10 +132,12 @@ function corresponding_node_references_update($home_node, $home_field, $away_nod
           //Empty places are removed
           //Yes this means the deltas change on the away node when a reference is made on the home node
           $values = array();
-          foreach ($referenced_node->{$away_field} as $key => $value) {                                           
-            if (!empty($value['nid'])) {
-              $values[] = $value;
-            }                      
+          if ($referenced_node->{$away_field}) {
+            foreach ($referenced_node->{$away_field} as $key => $value) {                                           
+              if (!empty($value['nid'])) {
+                $values[] = $value;
+              }                      
+            }
           }
           $referenced_node->{$away_field} = $values;
                               
@@ -133,10 +163,12 @@ function corresponding_node_references_update($home_node, $home_field, $away_nod
               _corresponding_node_references_update($referenced_node);
             }
             else {
-              $t_reference = format_plural($references, '1 reference', '@count references');
-              $t_allowed = format_plural($allowed_references, '1 reference is', '@count references are');
-              drupal_set_message(
-                t('Reference overloading: @title would of had @t_reference and only @t_allowed permitted. Before adding a reference, you would need to <a href="@url">edit</a> @title to remove an existing reference and resave this node to have make it correspond.', 
+            	$t_reference = format_plural($references, '1 reference', '@count references');
+            	$t_allowed = format_plural($allowed_references, '1 reference is', '@count references are');
+            	drupal_set_message(
+            	  t('Reference overloading: @title would of had @t_reference and only @t_allowed permitted. Before adding a reference, 
+            	     you would need to <a href="@url">edit</a> @title to remove an existing reference and resave this node to have make it correspond. 
+            	     Or you could allow this reference instance to have more references, go to the cck field settings of the instance', 
                   array(
                     '@title' => $referenced_node->title, 
                     '@url' => url('node/'. $referenced_node->nid),
