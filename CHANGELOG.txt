@@ -1,0 +1,2 @@
+Issue #1091616 by czigor: Fix for settings form when there are no corresponding fields.
+
