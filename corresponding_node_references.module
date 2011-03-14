@@ -1,7 +1,8 @@
 <?php
 /**
  * @file
- * Module file providing the "corresponding node reference" module main functions.
+ * Module file providing the "corresponding node reference" module main
+ * functions.
  */
 
 /**
@@ -31,7 +32,6 @@ function corresponding_node_references_menu() {
     'page arguments' => array('corresponding_node_references_update_form'),
     'access arguments' => array('administer corresponding node references settings'),
     'type' => MENU_LOCAL_TASK,
-
   );
 
   return $items;
@@ -41,26 +41,26 @@ function corresponding_node_references_menu() {
  * Implements hook_permission().
  */
 function corresponding_node_references_permission() {
-  return array('administer corresponding node references settings' => array(
-                 'title' => t('Administer corresponding node reference settings'),
-                 'description' => t('Administer corresponding node reference settings'),
-  ));
+  return array(
+    'administer corresponding node references settings' => array(
+      'title' => t('Administer corresponding node reference settings'),
+      'description' => t('Administer corresponding node reference settings'),
+    )
+  );
 }
 
 /**
- * The settings form
+ * The settings form.
  */
 function corresponding_node_references_settings_form() {
-  $form['intro'] = array('#markup' => t('Check which node references should listen to each other.
-  When checking a check box a reference on node type A to node B will automatically update the node reference field on node B
-  adding an entrie which points to node A.'));
+  $form['intro'] = array('#markup' => t('Check which node references should listen to each other. When checking a check box a reference on node type A to node B will automatically update the node reference field on node B adding an entrie which points to node A.'));
 
   $result = db_query("SELECT field_name, data FROM {field_config} WHERE type = :type", array(':type' => 'node_reference'));
   foreach ($result as $row) {
     $data = unserialize($row->data);
-      foreach ($data['settings']['referenceable_types'] as $reference) {
-        if ($reference != '0') {
-          $references[$row->field_name][] = $reference;
+    foreach ($data['settings']['referenceable_types'] as $reference) {
+      if ($reference != '0') {
+        $references[$row->field_name][] = $reference;
       }
     }
   }
@@ -70,8 +70,9 @@ function corresponding_node_references_settings_form() {
   foreach ($result as $row) {
     if (!empty($references[$row->field_name])) {
       foreach ($references[$row->field_name] as $reference) {
-        if ($row->entity_type == 'node')
-        $fields_to_compare[] = array('field_type' => $row->field_name, 'bundle' => $row->bundle, 'reference' => $reference);
+        if ($row->entity_type == 'node') {
+          $fields_to_compare[] = array('field_type' => $row->field_name, 'bundle' => $row->bundle, 'reference' => $reference);
+        }
       }
     }
   }
@@ -122,7 +123,7 @@ function corresponding_node_references_settings_form() {
 }
 
 /**
- * Submit function for settings form
+ * Submit function for settings form.
  */
 function corresponding_node_references_settings_form_submit($form, $form_values) {
   db_update('corresponding_node_references')->fields(array('enabled' => 0))->execute();
@@ -145,7 +146,7 @@ function corresponding_node_references_settings_form_submit($form, $form_values)
 }
 
 /**
- * Formats a label
+ * Formats a label.
  */
 function corresponding_node_references_format_label($key) {
   $key = explode(' ', $key);
@@ -174,13 +175,13 @@ function corresponding_node_references_node_delete($node) {
   corresponding_node_references_processing_node('delete', $node);
 }
 
-
 /**
  * Process a node's corresponding node references.
  *
  * @param $op the operation being performed on the node.
  * @param $node the node object
- * @param $process_unchanged whether or not to process node reference fields whose values have not changed.
+ * @param $process_unchanged whether or not to process node reference fields
+ *        whose values have not changed.
  */
 function corresponding_node_references_processing_node($op, $node, $process_unchanged = FALSE) {
   module_load_include('inc', 'corresponding_node_references', 'corresponding_node_references.crud');
@@ -197,6 +198,7 @@ function corresponding_node_references_processing_node($op, $node, $process_unch
         if ($key[0] != $key[2]) {
           break;
         }
+
       // Fall through.
       case $key[2]:
         $args = array($node, $key[3], $key[0], $key[1], $process_unchanged);
@@ -215,12 +217,13 @@ function corresponding_node_references_update_form() {
   $form = array();
 
   $form['intro'] = array(
-    '#value' => t('This will update all the existing nodes for the selected content types so that their node reference fields are in sync.') . '<br />' . t('This process may take a long time depending on the number of nodes you are updating.') . '<br />' . t('When the process is finished you will see a count of the number of nodes that were updated.'));
+    '#value' => t('This will update all the existing nodes for the selected content types so that their node reference fields are in sync.') . '<br />' . t('This process may take a long time depending on the number of nodes you are updating.') . '<br />' . t('When the process is finished you will see a count of the number of nodes that were updated.')
+  );
 
-    $options = _node_types_build()->types;
-    foreach ($options as $type => $class) {
-      $options[$type] = $class->name;
-    }
+  $options = _node_types_build()->types;
+  foreach ($options as $type => $class) {
+    $options[$type] = $class->name;
+  }
 
   $form['types'] = array(
     '#type' => 'checkboxes',
@@ -228,8 +231,6 @@ function corresponding_node_references_update_form() {
     '#options' => $options,
     '#description' => t('Select the node types that you want to update.'),
   );
-
-
 
   $form['limit'] = array(
     '#type' => 'select',
@@ -290,7 +291,10 @@ function corresponding_node_references_update_form_submit($form, &$form_state) {
 function corresponding_node_references_batch_index_remaining($types, $limit) {
   $batch = array(
     'operations' => array(
-      array('corresponding_node_references_batch_update_existing_nodes', array($types, $limit)),
+      array(
+        'corresponding_node_references_batch_update_existing_nodes',
+        array($types, $limit)
+      ),
     ),
     'finished' => 'corresponding_node_references_batch_update_existing_finished',
     'title' => t('Processing'),
@@ -318,11 +322,7 @@ function corresponding_node_references_batch_update_existing_nodes($types, $limi
   $args = $types;
   $args[] = $context['sandbox']['current_node'];
   // Get node IDs to update.
-  $result = db_query_range("SELECT nid
-                              FROM {node}
-                             WHERE type IN (:types)
-                               AND nid > :args
-                          ORDER BY nid", 0, $limit, array(':types' => $types, ':args' => $args[0]));
+  $result = db_query_range("SELECT nid FROM {node} WHERE type IN (:types) AND nid > :args ORDER BY nid", 0, $limit, array(':types' => $types, ':args' => $args[0]));
 
   while ($row = $result->fetchObject()) {
     $node = node_load($row->nid);
@@ -339,8 +339,8 @@ function corresponding_node_references_batch_update_existing_nodes($types, $limi
   if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
     $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
   }
-  // Put the total into the results section when we're finished so we can
-  // show it to the admin.
+  // Put the total into the results section when we're finished so we can show
+  // it to the admin.
   if ($context['finished']) {
     $context['results']['count'] = $context['sandbox']['progress'];
   }
@@ -365,4 +365,3 @@ function corresponding_node_references_batch_update_existing_finished($success, 
   }
   drupal_set_message($message, $type);
 }
-
