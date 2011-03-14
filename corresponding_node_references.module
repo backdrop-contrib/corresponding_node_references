@@ -51,7 +51,7 @@ function corresponding_node_references_permission() {
  * The settings form
  */
 function corresponding_node_references_settings_form() {
-  $form['intro'] = array('#value' => t('Check which node references should listen to each other.
+  $form['intro'] = array('#markup' => t('Check which node references should listen to each other.
   When checking a check box a reference on node type A to node B will automatically update the node reference field on node B
   adding an entrie which points to node A.'));
 
@@ -112,10 +112,11 @@ function corresponding_node_references_settings_form() {
       );
       $form['submit'] = array('#type' => 'submit', '#value' => t('Save'));
     }
-    else {
-      $form['text'] = array('#value' => '<div>' . t('There are no node types which have a corresponding node reference') . '</div>');
-    }
   }
+  else {
+    $form['text'] = array('#markup' => '<div>' . t('There are no node types which have a corresponding node reference') . '</div>');
+  }
+
 
   return $form;
 }
