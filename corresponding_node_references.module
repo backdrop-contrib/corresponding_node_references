@@ -55,7 +55,7 @@ function corresponding_node_references_permission() {
 function corresponding_node_references_settings_form() {
   $form['intro'] = array('#markup' => t('Check which node references should listen to each other. When checking a check box a reference on node type A to node B will automatically update the node reference field on node B adding an entrie which points to node A.'));
 
-  $result = db_query("SELECT field_name, data FROM {field_config} WHERE type = :type", array(':type' => 'node_reference'));
+  $result = db_query("SELECT field_name, data FROM {field_config} WHERE type = :type AND deleted = 0", array(':type' => 'node_reference'));
   foreach ($result as $row) {
     $data = unserialize($row->data);
     foreach ($data['settings']['referenceable_types'] as $reference) {
