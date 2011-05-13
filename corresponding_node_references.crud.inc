@@ -31,7 +31,7 @@ function corresponding_node_references_insert($home_node, $home_field, $away_nod
               // Add the new reference.
               // If there are no other references, we need to make sure this
               // is delta 0
-              if ($referenced_node->{$away_field}[$lang][0]['nid'] == NULL) {
+              if (array_key_exists($lang, $referenced_node->{$away_field}) == FALSE || $referenced_node->{$away_field}[$lang][0]['nid'] == NULL) {
                 $referenced_node->{$away_field}[$lang][0]['nid'] = $home_node->nid;
               }
               else {
