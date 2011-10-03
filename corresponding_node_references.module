@@ -320,9 +320,9 @@ function corresponding_node_references_batch_update_existing_nodes($types, $limi
 
   $nids = array();
   $args = $types;
-  $args[] = $context['sandbox']['current_node'];
+  $args['current node'] = $context['sandbox']['current_node'];
   // Get node IDs to update.
-  $result = db_query_range("SELECT nid FROM {node} WHERE type IN (:types) AND nid > :args ORDER BY nid", 0, $limit, array(':types' => $types, ':args' => $args[0]));
+  $result = db_query_range("SELECT nid FROM {node} WHERE type IN (:types) AND nid > :args ORDER BY nid", 0, $limit, array(':types' => $types, ':args' => $args['current_node']));
 
   while ($row = $result->fetchObject()) {
     $node = node_load($row->nid);
