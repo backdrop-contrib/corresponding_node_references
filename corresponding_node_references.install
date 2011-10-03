@@ -16,7 +16,15 @@ function corresponding_node_references_schema() {
       'enabled' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
     ),
     'primary key' => array('node_types_content_fields'),
+    'export' => array(
+      'key' => 'node_types_content_fields',
+      'primary key' => 'node_types_content_fields',
+      'key name' => 'Corresponding node reference',
+      'identifier' => 'cnr_obj',
+      'api' => array(
+        'owner' => 'Corresponding Node References',
+      ),
+    ),
   );
-
   return $schema;
 }
