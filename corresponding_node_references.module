@@ -196,3 +196,9 @@ function corresponding_node_references_batch_update_existing_finished($success, 
   }
   drupal_set_message($message, $type);
 }
+
+function corresponding_node_references_ctools_plugin_api($owner, $api) {
+  if ($owner == 'corresponding_node_references' && $api == 'default_corresponding_node_references_presets') {
+    return array('version' => 1);
+  }
+}
