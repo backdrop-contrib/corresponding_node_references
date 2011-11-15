@@ -247,5 +247,5 @@ function corresponding_node_references_delete($home_node, $home_field, $away_nod
  * @param $node the referenced node to be updated.
  */
 function _corresponding_node_references_update(&$node) {
-  node_save($node);
+  field_attach_update('node', $node);
 }
