@@ -1,4 +1,4 @@
-+<?php
+<?php
 /**
  * @file
  * Admin functionality, separated for performance purposes.
@@ -54,7 +54,7 @@ function corresponding_node_references_settings_form() {
         );
         $form['values'][$count]['enabled_' . $count] = array(
           '#type' => 'checkbox',
-          '#default_value' => db_query("SELECT enabled FROM {corresponding_node_references} WHERE node_types_content_fields = :key", array(':key' => $formated_key))->fetchField(),
+          '#default_value' => corresponding_node_references_preset_enabled($formated_key),
           '#title' => $formated_label,
         );
         $count++;
@@ -81,7 +81,7 @@ function corresponding_node_references_settings_form() {
  * Submit function for settings form.
  */
 function corresponding_node_references_settings_form_submit($form, $form_values) {
-  db_update('corresponding_node_references')->fields(array('enabled' => 0))->execute();
+  ctools_include('export');
   $query_values = array();
 
   $mapping = unserialize($form_values['values']['mapping']);
@@ -92,9 +92,22 @@ function corresponding_node_references_settings_form_submit($form, $form_values)
     }
   }
 
+  // load all existing presets
+  $presets = ctools_export_crud_load_all('corresponding_node_references');
+
   foreach ($query_values as $key => $value) {
-    db_delete('corresponding_node_references')->condition('node_types_content_fields', $key)->execute();
-    db_insert('corresponding_node_references')->fields(array('node_types_content_fields' => $key, 'enabled' => $value))->execute();
+    // get preset object (create new one if it doesn't exist already).
+    $preset = empty($presets[$key]) ? ctools_export_crud_new('corresponding_node_references') : $presets[$key];
+    // set and save value
+    $preset->enabled = $value;
+    ctools_export_crud_save('corresponding_node_references', $preset);
+    // remove from list of presets, so we know which ones are still used
+    if (isset($presets[$key])) unset($presets[$key]);
+  }
+
+  // delete old presets
+  foreach ($presets as $preset) {
+    //ctools_export_crud_delete($preset);
   }
 
   drupal_set_message(t('The configuration has been saved'));

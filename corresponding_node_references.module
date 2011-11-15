@@ -83,6 +83,30 @@ function corresponding_node_references_node_delete($node) {
 }
 
 /**
+ * Load enabled CNR presets.
+ */
+function corresponding_node_references_preset_load_enabled() {
+  ctools_include('export');
+  return ctools_export_load_object('corresponding_node_references', 'conditions', array('enabled' => 1));
+}
+
+/**
+ * Return CNR preset by key.
+ */
+function corresponding_node_references_preset_load($key) {
+  ctools_include('export');
+  return ctools_export_crud_load('corresponding_node_references', $key);
+}
+
+/**
+ * Return 1 if CNR preset specified by given key is enabled.
+ */
+function corresponding_node_references_preset_enabled($key) {
+  $preset = corresponding_node_references_preset_load($key);
+  return empty($preset) ? 0 : $preset->enabled;
+}
+
+/**
  * Process a node's corresponding node references.
  *
  * @param $op the operation being performed on the node.
@@ -93,8 +117,8 @@ function corresponding_node_references_node_delete($node) {
 function corresponding_node_references_processing_node($op, $node, $process_unchanged = FALSE) {
   module_load_include('inc', 'corresponding_node_references', 'corresponding_node_references.crud');
 
-  $result = db_query("SELECT node_types_content_fields FROM {corresponding_node_references} WHERE enabled = :enabled", array(':enabled' => 1));
-  while ($row = $result->fetchObject()) {
+  $result = corresponding_node_references_preset_load_enabled();
+  while ($row = array_shift($result)) {
     $key = explode('*', $row->node_types_content_fields);
 
     switch ($node->type) {
@@ -151,7 +175,7 @@ function corresponding_node_references_batch_update_existing_nodes($types, $limi
 
   $nids = array();
   $args = $types;
-  $args['current node'] = $context['sandbox']['current_node'];
+  $args['current_node'] = $context['sandbox']['current_node'];
   // Get node IDs to update.
   $result = db_query_range("SELECT nid FROM {node} WHERE type IN (:types) AND nid > :args ORDER BY nid", 0, $limit, array(':types' => $types, ':args' => $args['current_node']));
 
