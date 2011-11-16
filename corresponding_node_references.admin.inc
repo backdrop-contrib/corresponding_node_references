@@ -99,6 +99,9 @@ function corresponding_node_references_settings_form_submit($form, $form_values)
     // get preset object (create new one if it doesn't exist already).
     $preset = empty($presets[$key]) ? ctools_export_crud_new('corresponding_node_references') : $presets[$key];
     // set and save value
+    if (empty($preset->node_types_content_fields)) {
+      $preset->node_types_content_fields = $key;
+    }
     $preset->enabled = $value;
     ctools_export_crud_save('corresponding_node_references', $preset);
     // remove from list of presets, so we know which ones are still used
