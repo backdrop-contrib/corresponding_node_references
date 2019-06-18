@@ -68,7 +68,7 @@ function corresponding_node_references_config_info() {
  */
 function corresponding_node_references_format_label($key) {
   $key = explode(' ', $key);
-  return t('Field instance:"!field1" on Bundle type:"!type1" <b>Corresponds with</b> Field instance:"!field2" on Bundle type:"!type2"',
+  return t('Field instance: <em>!field1</em> on Bundle type: <em>!type1</em> <strong>Corresponds with</strong> Field instance: <em>!field2</em> on Bundle type: <em>!type2</em>',
     array('!type1' => $key[0], '!field1' => $key[1], '!type2' => $key[2], '!field2' => $key[3]));
 }
 

@@ -63,16 +63,16 @@ function corresponding_node_references_settings_form() {
     if (!empty($corr_noderefs)) {
       $count = 0;
       foreach ($corr_noderefs as $key => $corr_noderef) {
-        $formated_label = corresponding_node_references_format_label($key);
-        $formated_key = str_replace(' ', '*', $key);
-        $mapping[] = $formated_key;
+        $formatted_label = corresponding_node_references_format_label($key);
+        $formatted_key = str_replace(' ', '*', $key);
+        $mapping[] = $formatted_key;
         $form['values'][$count] = array(
           '#type' => 'fieldset',
         );
         $form['values'][$count]['enabled_' . $count] = array(
           '#type' => 'checkbox',
-          '#default_value' => $config->get('presets.' . $formated_key),
-          '#title' => $formated_label,
+          '#default_value' => $config->get('presets.' . $formatted_key),
+          '#title' => $formatted_label,
         );
         $count++;
       }

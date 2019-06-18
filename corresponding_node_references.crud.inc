@@ -76,8 +76,8 @@ function corresponding_node_references_insert($home_node, $home_field, $away_nod
  *        reference fields that don't match up.
  */
 function corresponding_node_references_update($home_node, $home_field, $away_node_type, $away_field, $process_unchanged = FALSE) {
-  // Since home_node is just beeing saved, $old_node and $home_node are different!
-  $old_node = node_load($home_node->nid, NULL, FALSE);
+  // Since home_node is just being saved, $old_node and $home_node are different!
+  $old_node = $home_node->original;
   $old = $new = array();
 
   // Determine the nodereference values before the update.
