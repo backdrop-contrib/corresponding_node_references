@@ -8,29 +8,46 @@
  * The settings form.
  */
 function corresponding_node_references_settings_form() {
-  $form['intro'] = array('#markup' => t('Check which node references should listen to each other. When checking a check box a reference on node type A to node B will automatically update the node reference field on node B adding an entrie which points to node A.'));
+  //$form['#config'] = 'corresponding_node_references.settings';
+  $form['intro'] = array('#markup' => t('Check which node references should listen to each other. When checking a check box a reference on content type A to node B will automatically update the node reference field on node B adding an entrie which points to node A.'));
 
-  $result = db_query("SELECT field_name, data FROM {field_config} WHERE type = :type AND deleted = 0", array(':type' => 'node_reference'));
-  foreach ($result as $row) {
-    $data = unserialize($row->data);
-    foreach ($data['settings']['referenceable_types'] as $reference) {
+  $field_config_names = config_get_names_with_prefix('field.field.');
+  $config = config('corresponding_node_references.settings');
+
+  foreach ($field_config_names as $field_config_name) {
+    $config_field = config($field_config_name);
+    if ($config_field->get('type') != 'node_reference') {
+      continue;
+    }
+    $field_name = $config_field->get('field_name');
+    $settings = $config_field->get('settings');
+    foreach ($settings['referenceable_types'] as $reference) {
       if ($reference != '0') {
-        $references[$row->field_name][] = $reference;
+        $references[$field_name][] = $reference;
       }
     }
   }
 
-  $result = db_query("SELECT fci.field_name, fci.entity_type, fci.bundle FROM {field_config_instance} fci INNER JOIN {field_config} fc ON fc.field_name = fci.field_name WHERE fc.type = :type", array(':type' => 'node_reference'));
+  $instance_config_names = config_get_names_with_prefix('field.instance.node.');
+  $instances = array();
+  foreach ($instance_config_names as $instance_config_name) {
+    $config_instance = config($instance_config_name);
+    $field_name = $config_instance->get('field_name');
+    $instances[$field_name]['field_name'] = $field_name;
+    $instances[$field_name]['entity_type'] = $config_instance->get('entity_type');
+    $instances[$field_name]['bundle'] = $config_instance->get('bundle');
+  }
 
-  foreach ($result as $row) {
-    if (!empty($references[$row->field_name])) {
-      foreach ($references[$row->field_name] as $reference) {
-        if ($row->entity_type == 'node') {
-          $fields_to_compare[] = array('field_type' => $row->field_name, 'bundle' => $row->bundle, 'reference' => $reference);
+  foreach ($instances as $instance) {
+    if (!empty($references[$instance['field_name']])) {
+      foreach ($references[$instance['field_name']] as $reference) {
+        if ($instance['entity_type'] == 'node') {
+          $fields_to_compare[] = array('field_type' => $instance['field_name'], 'bundle' => $instance['bundle'], 'reference' => $reference);
         }
       }
     }
   }
+
   if (!empty($fields_to_compare)) {
     $corr_noderefs = array();
     foreach ($fields_to_compare as $field) {
@@ -54,7 +71,7 @@ function corresponding_node_references_settings_form() {
         );
         $form['values'][$count]['enabled_' . $count] = array(
           '#type' => 'checkbox',
-          '#default_value' => corresponding_node_references_preset_enabled($formated_key),
+          '#default_value' => $config->get('presets.' . $formated_key),
           '#title' => $formated_label,
         );
         $count++;
@@ -70,9 +87,8 @@ function corresponding_node_references_settings_form() {
     }
   }
   else {
-    $form['text'] = array('#markup' => '<div>' . t('There are no node types which have a corresponding node reference') . '</div>');
+    $form['text'] = array('#markup' => '<div>' . t('There are no content types which have a corresponding node reference') . '</div>');
   }
-
 
   return $form;
 }
@@ -81,39 +97,19 @@ function corresponding_node_references_settings_form() {
  * Submit function for settings form.
  */
 function corresponding_node_references_settings_form_submit($form, $form_values) {
-  ctools_include('export');
-  $query_values = array();
+  $presets = array();
 
   $mapping = unserialize($form_values['values']['mapping']);
   foreach ($form_values['values'] as $key => $value) {
     $keys = explode('_', $key);
     if ($keys[0] == 'enabled') {
-      $query_values[$mapping[$keys[1]]] = $value;
+      $presets[$mapping[$keys[1]]] = $value;
     }
   }
 
-  // load all existing presets
-  $presets = ctools_export_crud_load_all('corresponding_node_references');
+  config_set('corresponding_node_references.settings', 'presets', $presets);
 
-  foreach ($query_values as $key => $value) {
-    // get preset object (create new one if it doesn't exist already).
-    $preset = empty($presets[$key]) ? ctools_export_crud_new('corresponding_node_references') : $presets[$key];
-    // set and save value
-    if (empty($preset->node_types_content_fields)) {
-      $preset->node_types_content_fields = $key;
-    }
-    $preset->enabled = $value;
-    ctools_export_crud_save('corresponding_node_references', $preset);
-    // remove from list of presets, so we know which ones are still used
-    if (isset($presets[$key])) unset($presets[$key]);
-  }
-
-  // delete old presets
-  foreach ($presets as $preset) {
-    ctools_export_crud_delete('corresponding_node_references', $preset);
-  }
-
-  drupal_set_message(t('The configuration has been saved'));
+  backdrop_set_message(t('The configuration has been saved'));
 }
 
 /**
@@ -134,9 +130,9 @@ function corresponding_node_references_update_form() {
 
   $form['types'] = array(
     '#type' => 'checkboxes',
-    '#title' => t('Node types'),
+    '#title' => t('Content types'),
     '#options' => $options,
-    '#description' => t('Select the node types that you want to update.'),
+    '#description' => t('Select the content types that you want to update.'),
   );
 
   $form['limit'] = array(
@@ -178,7 +174,7 @@ function corresponding_node_references_update_form() {
 function corresponding_node_references_update_form_validate($form, &$form_state) {
   $types = array_filter($form_state['values']['types']);
   if (empty($types)) {
-    form_set_error('types', t('You must select at least one node type.'));
+    form_set_error('types', t('You must select at least one content type.'));
   }
 }
 

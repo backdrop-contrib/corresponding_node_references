@@ -12,7 +12,7 @@ function corresponding_node_references_menu() {
   $items = array();
   $items['admin/config/system/corresponding_node_references'] = array(
     'title' => 'Corresponding node references',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('corresponding_node_references_settings_form'),
     'access arguments' => array('administer corresponding node references settings'),
     'file' => 'corresponding_node_references.admin.inc',
@@ -21,7 +21,7 @@ function corresponding_node_references_menu() {
 
   $items['admin/config/system/corresponding_node_references/references'] = array(
     'title' => 'Corresponding node references',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('corresponding_node_references_settings_form'),
     'access arguments' => array('administer corresponding node references settings'),
     'file' => 'corresponding_node_references.admin.inc',
@@ -30,7 +30,7 @@ function corresponding_node_references_menu() {
 
   $items['admin/config/system/corresponding_node_references/update'] = array(
     'title' => 'Update existing nodes',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('corresponding_node_references_update_form'),
     'access arguments' => array('administer corresponding node references settings'),
     'file' => 'corresponding_node_references.admin.inc',
@@ -50,6 +50,17 @@ function corresponding_node_references_permission() {
       'description' => t('Administer corresponding node reference settings'),
     )
   );
+}
+
+/**
+ * Implements hook_config_info().
+ */
+function corresponding_node_references_config_info() {
+  $prefixes['corresponding_node_references.settings'] = array(
+    'label' => t('Configuration'),
+    'group' => t('Corresponding Node References'),
+  );
+  return $prefixes;
 }
 
 /**
@@ -86,24 +97,9 @@ function corresponding_node_references_node_delete($node) {
  * Load enabled CNR presets.
  */
 function corresponding_node_references_preset_load_enabled() {
-  ctools_include('export');
-  return ctools_export_load_object('corresponding_node_references', 'conditions', array('enabled' => 1));
-}
-
-/**
- * Return CNR preset by key.
- */
-function corresponding_node_references_preset_load($key) {
-  ctools_include('export');
-  return ctools_export_crud_load('corresponding_node_references', $key);
-}
-
-/**
- * Return 1 if CNR preset specified by given key is enabled.
- */
-function corresponding_node_references_preset_enabled($key) {
-  $preset = corresponding_node_references_preset_load($key);
-  return empty($preset) ? 0 : $preset->enabled;
+  $config = config('corresponding_node_references.settings');
+  $presets = array_filter($config->get('presets'));
+  return $presets;
 }
 
 /**
@@ -117,9 +113,10 @@ function corresponding_node_references_preset_enabled($key) {
 function corresponding_node_references_processing_node($op, $node, $process_unchanged = FALSE) {
   module_load_include('inc', 'corresponding_node_references', 'corresponding_node_references.crud');
 
-  $result = corresponding_node_references_preset_load_enabled();
-  while ($row = array_shift($result)) {
-    $key = explode('*', $row->node_types_content_fields);
+  $enabled_presets = corresponding_node_references_preset_load_enabled();
+
+  foreach ($enabled_presets as $preset => $value) {
+    $key = explode('*', $preset);
 
     switch ($node->type) {
       case $key[0]:
@@ -218,11 +215,5 @@ function corresponding_node_references_batch_update_existing_finished($success, 
     $error_operation = reset($operations);
     $message = 'An error occurred while processing ' . $error_operation[0] . ' with arguments:' . print_r($error_operation[0], TRUE);
   }
-  drupal_set_message($message, $type);
-}
-
-function corresponding_node_references_ctools_plugin_api($owner, $api) {
-  if ($owner == 'corresponding_node_references' && $api == 'default_corresponding_node_references_presets') {
-    return array('version' => 1);
-  }
+  backdrop_set_message($message, $type);
 }

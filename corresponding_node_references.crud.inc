@@ -25,7 +25,7 @@ function corresponding_node_references_insert($home_node, $home_field, $away_nod
         if (!empty($reference['nid'])) {
           // Load the referenced node if it is of the specified away type.
           // TODO: Do this with EntityFieldQuery
-          // See http://api.drupal.org/api/drupal/modules--node--node.module/function/node_load_multiple/7
+          // See https://api.backdropcms.org/api/backdrop/core%21modules%21node%21node.module/function/node_load_multiple/1
           if ($referenced_node = node_load($reference['nid'], NULL, FALSE)) {
             if ($referenced_node->type == $away_node_type) {
               $away_field_language = field_language('node', $referenced_node, $away_field);
@@ -189,8 +189,8 @@ function corresponding_node_references_update($home_node, $home_field, $away_nod
               else {
                 $t_reference = format_plural($references, '1 reference', '@count references');
                 $t_allowed = format_plural($allowed_references, '1 reference is', '@count references are');
-                drupal_set_message(
-                  t('Reference overloading: @title would of had @t_reference and only @t_allowed permitted. Before adding a reference, you would need to <a href="@url">edit</a> @title to remove an existing reference and resave this node to have make it correspond. Or you could allow this reference instance to have more references, go to the cck field settings of the instance',
+                backdrop_set_message(
+                  t('Reference overloading: @title would of had @t_reference and only @t_allowed permitted. Before adding a reference, you would need to <a href="@url">edit</a> @title to remove an existing reference and resave this node to have make it correspond. Or you could allow this reference instance to have more references, go to the field settings of the instance',
                     array(
                       '@title' => $referenced_node->title,
                       '@url' => url('node/' . $referenced_node->nid),

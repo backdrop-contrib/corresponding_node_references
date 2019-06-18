@@ -1,5 +1,6 @@
 name = Corresponding Node References
-description = Syncs the node reference between two node types which have a nodereference to each other.  
-core = 7.x
+description = Syncs the node reference between two content types which have a node reference to each other.
+backdrop = 1.x
+type = module
+configure = admin/config/system/corresponding_node_references
 dependencies[] = node_reference
-dependencies[] = ctools
