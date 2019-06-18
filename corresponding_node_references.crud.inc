@@ -77,7 +77,7 @@ function corresponding_node_references_insert($home_node, $home_field, $away_nod
  */
 function corresponding_node_references_update($home_node, $home_field, $away_node_type, $away_field, $process_unchanged = FALSE) {
   // Since home_node is just being saved, $old_node and $home_node are different!
-  $old_node = $home_node->original;
+  $old_node = !empty($home_node->original) ? $home_node->original : $home_node;
   $old = $new = array();
 
   // Determine the nodereference values before the update.
