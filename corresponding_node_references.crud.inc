@@ -252,7 +252,5 @@ function _corresponding_node_references_update(&$node) {
   field_attach_presave('node', $node);
   field_attach_update('node', $node);
   // Flush Entity Cache record.
-  if (module_exists('entitycache')) {
-    cache_clear_all($node->nid, 'cache_entity_node');
-  }
+  cache_clear_all($node->nid, 'cache_entity_node');
 }
