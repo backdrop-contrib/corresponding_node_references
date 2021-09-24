@@ -12,6 +12,7 @@ function corresponding_node_references_menu() {
   $items = array();
   $items['admin/config/system/corresponding_node_references'] = array(
     'title' => 'Corresponding node references',
+    'description' => t('Manage node reference fields that should correspond and sync during content updates.'),
     'page callback' => 'backdrop_get_form',
     'page arguments' => array('corresponding_node_references_settings_form'),
     'access arguments' => array('administer corresponding node references settings'),
@@ -47,7 +48,7 @@ function corresponding_node_references_permission() {
   return array(
     'administer corresponding node references settings' => array(
       'title' => t('Administer corresponding node reference settings'),
-      'description' => t('Administer corresponding node reference settings'),
+      'description' => t('Administer corresponding node reference settings.'),
     )
   );
 }
@@ -65,6 +66,11 @@ function corresponding_node_references_config_info() {
 
 /**
  * Formats a label.
+ *
+ * @param array $key
+ *
+ * @return string
+ *   A formatted label.
  */
 function corresponding_node_references_format_label($key) {
   $key = explode(' ', $key);
@@ -105,10 +111,13 @@ function corresponding_node_references_preset_load_enabled() {
 /**
  * Process a node's corresponding node references.
  *
- * @param $op the operation being performed on the node.
- * @param $node the node object
- * @param $process_unchanged whether or not to process node reference fields
- *        whose values have not changed.
+ * @param string $op
+ *  The operation being performed on the node.
+ * @param object $node
+ *  The node object
+ * @param bool $process_unchanged
+ *  Whether or not to process node reference fields
+ *  whose values have not changed.
  */
 function corresponding_node_references_processing_node($op, $node, $process_unchanged = FALSE) {
   module_load_include('inc', 'corresponding_node_references', 'corresponding_node_references.crud');

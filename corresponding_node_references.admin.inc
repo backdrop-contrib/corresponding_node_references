@@ -8,8 +8,7 @@
  * The settings form.
  */
 function corresponding_node_references_settings_form() {
-  //$form['#config'] = 'corresponding_node_references.settings';
-  $form['intro'] = array('#markup' => t('Check which node references should listen to each other. When checking a check box, a new reference on node A to node B will automatically update the node reference field on node B adding an entry which points to node A.'));
+  $form['intro'] = array('#markup' => t('Check which node references should correspond, that is, "listen" to each other. When checking a check box, a new reference on node A to node B will automatically update the node reference field on node B adding an entry which points to node A.'));
 
   $field_config_names = config_get_names_with_prefix('field.field.');
   $config = config('corresponding_node_references.settings');
@@ -77,8 +76,9 @@ function corresponding_node_references_settings_form() {
         $count++;
       }
 
-      //We are using a hidden field to submit the configuration because on some systems the checkbox name length is limited
-      //, using the key would cause the length to be too long.
+      // We are using a hidden field to submit the configuration because on
+      // some systems the checkbox name length is limited, using the key would
+      // cause the length to be too long.
       // @see https://drupal.org/node/558612
       $form['mapping'] = array(
         '#type' => 'hidden',
@@ -88,7 +88,7 @@ function corresponding_node_references_settings_form() {
     }
   }
   else {
-    $form['text'] = array('#markup' => '<div>' . t('There are no content types which have a corresponding node reference') . '</div>');
+    $form['text'] = array('#markup' => '<div>' . t('There are no content types which have a corresponding node reference.') . '</div>');
   }
 
   return $form;
