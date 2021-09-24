@@ -9,7 +9,7 @@
  */
 function corresponding_node_references_settings_form() {
   //$form['#config'] = 'corresponding_node_references.settings';
-  $form['intro'] = array('#markup' => t('Check which node references should listen to each other. When checking a check box a reference on content type A to node B will automatically update the node reference field on node B adding an entrie which points to node A.'));
+  $form['intro'] = array('#markup' => t('Check which node references should listen to each other. When checking a check box, a new reference on node A to node B will automatically update the node reference field on node B adding an entry which points to node A.'));
 
   $field_config_names = config_get_names_with_prefix('field.field.');
   $config = config('corresponding_node_references.settings');
@@ -78,7 +78,8 @@ function corresponding_node_references_settings_form() {
       }
 
       //We are using a hidden field to submit the configuration because on some systems the checkbox name length is limited
-      //, using the key would cause the length to be too long see issue #558612
+      //, using the key would cause the length to be too long.
+      // @see https://drupal.org/node/558612
       $form['mapping'] = array(
         '#type' => 'hidden',
         '#value' => serialize($mapping),
