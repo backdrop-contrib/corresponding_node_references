@@ -12,7 +12,7 @@ function corresponding_node_references_install() {
   if (!backdrop_is_cli()) {
     $t = get_t();
     backdrop_set_message($t("Corresponding node reference installed successfully. !link.", array(
-      '!link' => l($t('Configure'), 'admin/config/system/corresponding_node_references'),
+      '!link' => l($t('Configure'), 'admin/config/content/corresponding_node_references'),
     )));
   }
 }

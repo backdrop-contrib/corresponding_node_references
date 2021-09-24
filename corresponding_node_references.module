@@ -10,7 +10,7 @@
  */
 function corresponding_node_references_menu() {
   $items = array();
-  $items['admin/config/system/corresponding_node_references'] = array(
+  $items['admin/config/content/corresponding_node_references'] = array(
     'title' => 'Corresponding node references',
     'description' => t('Manage node reference fields that should correspond and sync during content updates.'),
     'page callback' => 'backdrop_get_form',
@@ -20,7 +20,7 @@ function corresponding_node_references_menu() {
     'type' => MENU_NORMAL_ITEM,
   );
 
-  $items['admin/config/system/corresponding_node_references/references'] = array(
+  $items['admin/config/content/corresponding_node_references/references'] = array(
     'title' => 'Corresponding node references',
     'page callback' => 'backdrop_get_form',
     'page arguments' => array('corresponding_node_references_settings_form'),
@@ -29,7 +29,7 @@ function corresponding_node_references_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
 
-  $items['admin/config/system/corresponding_node_references/update'] = array(
+  $items['admin/config/content/corresponding_node_references/update'] = array(
     'title' => 'Update existing nodes',
     'page callback' => 'backdrop_get_form',
     'page arguments' => array('corresponding_node_references_update_form'),

@@ -23,7 +23,7 @@ Installation
 
 * Install this module using the official Backdrop CMS instructions at
   <https://backdropcms.org/guide/modules>
-* Configure at admin/config/system/corresponding_node_references
+* Configure at admin/config/content/corresponding_node_references
 
 Configuration
 -------------
