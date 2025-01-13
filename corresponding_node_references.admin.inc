@@ -40,8 +40,8 @@ function corresponding_node_references_settings_form() {
     $instances[$field_name][] = $info;
   }
 
-  foreach ($instances as $instance_array) {
-    foreach ($instance_array as $instance){
+  foreach ($instances as $info_array) {
+    foreach ($info_array as $instance){
       if (!empty($references[$instance['field_name']])) {
         foreach ($references[$instance['field_name']] as $reference) {
           if ($instance['entity_type'] == 'node') {
