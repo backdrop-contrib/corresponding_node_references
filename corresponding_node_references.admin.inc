@@ -32,18 +32,23 @@ function corresponding_node_references_settings_form() {
   foreach ($instance_config_names as $instance_config_name) {
     $config_instance = config($instance_config_name);
     $field_name = $config_instance->get('field_name');
-    $instances[$field_name]['field_name'] = $field_name;
-    $instances[$field_name]['entity_type'] = $config_instance->get('entity_type');
-    $instances[$field_name]['bundle'] = $config_instance->get('bundle');
+    $info = array(
+      'field_name' => $field_name,
+      'entity_type' => $config_instance->get('entity_type'),
+      'bundle' => $config_instance->get('bundle'),
+    );
+    $instances[$field_name][] = $info;
   }
 
-  foreach ($instances as $instance) {
-    if (!empty($references[$instance['field_name']])) {
-      foreach ($references[$instance['field_name']] as $reference) {
-        if ($instance['entity_type'] == 'node') {
-          $fields_to_compare[] = array('field_type' => $instance['field_name'], 'bundle' => $instance['bundle'], 'reference' => $reference);
+  foreach ($instances as $instance_info) {
+    foreach ($instance_info as $instance){
+      if (!empty($references[$instance['field_name']])) {
+        foreach ($references[$instance['field_name']] as $reference) {
+          if ($instance['entity_type'] == 'node') {
+            $fields_to_compare[] = array('field_type' => $instance['field_name'], 'bundle' => $instance['bundle'], 'reference' => $reference);
+          }
         }
-      }
+      }  
     }
   }
 
