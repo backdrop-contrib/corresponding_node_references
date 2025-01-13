@@ -48,7 +48,7 @@ function corresponding_node_references_settings_form() {
             $fields_to_compare[] = array('field_type' => $instance['field_name'], 'bundle' => $instance['bundle'], 'reference' => $reference);
           }
         }
-      }  
+      }
     }
   }
 
